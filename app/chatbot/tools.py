@@ -210,7 +210,7 @@ def get_tool(recipient_id: str):
         report_name = 'sales_report.pdf'
         try:
             report_path = generar_reporte_ventas(
-                excel_file='https://firebasestorage.googleapis.com/v0/b/test-cervant.firebasestorage.app/o/tenants%2Fpublic%2Fcervant%2Fventas.csv?alt=media&token=f7ed9274-175b-49d5-a8e7-90eb92803ad2',
+                excel_file=os.getenv('FILE_URL'),
                 output_pdf=report_name,
                 start_date=start_date,
                 end_date=end_date
@@ -235,7 +235,7 @@ def get_tool(recipient_id: str):
             
 if __name__ == "__main__":
   generar_reporte_ventas(
-    excel_file='https://firebasestorage.googleapis.com/v0/b/test-cervant.firebasestorage.app/o/tenants%2Fpublic%2Fcervant%2Fventas.csv?alt=media&token=f7ed9274-175b-49d5-a8e7-90eb92803ad2',
+    excel_file=os.getenv('FILE_URL'),
     output_pdf='sales_report.pdf',
     start_date="2017-01-01",
     end_date="2017-12-31"
