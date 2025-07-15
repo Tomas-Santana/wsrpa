@@ -36,7 +36,7 @@ class PDF(FPDF):
         self.multi_cell(0, 5, body_text)
         self.ln(5)
 
-def generar_reporte_ventas(
+def generate_sales_report(
     excel_file='files/ventas.csv',
     output_pdf='sales_report.pdf',
     start_date=None,
@@ -113,51 +113,20 @@ def generar_reporte_ventas(
 
     pdf.chapter_title('Gráficos de Recaudación')
 
-    if os.path.exists(os.path.join(tmp, 'recaudado_vendedor.png')):
-        pdf.chapter_body('Recaudación por Vendedor:')
-        pdf.image(os.path.join(tmp, 'recaudado_vendedor.png'), x=10, w=pdf.w - 20)
-        pdf.ln(5)
-    else:
-        pdf.chapter_body('No se pudo generar el gráfico de recaudación por vendedor.')
 
-    if os.path.exists(os.path.join(tmp, 'recaudado_sede.png')):
-        pdf.add_page()
-        pdf.chapter_body('Recaudación por Sede:')
-        pdf.image(os.path.join(tmp, 'recaudado_sede.png'), x=10, w=pdf.w - 20)
-        pdf.ln(5)
-    else:
-        pdf.chapter_body('No se pudo generar el gráfico de recaudación por sede.')
+ 
 
-    if os.path.exists(os.path.join(tmp, 'ventas_por_canal.png')):
-        pdf.add_page()
-        pdf.chapter_body('Ventas por Canal:')
-        pdf.image(os.path.join(tmp, 'ventas_por_canal.png'), x=10, w=pdf.w - 20)
-        pdf.ln(5)
-    else:
-        pdf.chapter_body('No se pudo generar el gráfico de ventas por canal.')
+    add_chart(pdf, os.path.join(tmp, 'recaudado_vendedor.png'), 'Recaudación por Vendedor:', add_new_page=False, fail_msg='No se pudo generar el gráfico de recaudación por vendedor.')
+    add_chart(pdf, os.path.join(tmp, 'recaudado_sede.png'), 'Recaudación por Sede:', add_new_page=True, fail_msg='No se pudo generar el gráfico de recaudación por sede.')
+    add_chart(pdf, os.path.join(tmp, 'ventas_por_canal.png'), 'Ventas por Canal:', add_new_page=True, fail_msg='No se pudo generar el gráfico de ventas por canal.')
 
     pdf.add_page()
     pdf.chapter_title('Detalle de Ventas')
 
-    pdf.chapter_body('Detalle por Vendedor:')
-    pdf.set_font('Helvetica', 'B', 10)
-    pdf.cell(90, 7, 'Vendedor', 1)
-    pdf.cell(60, 7, 'Recaudado (USD)', 1, 1)
-    pdf.set_font('Helvetica', '', 10)
-    for index, value in sales_by_seller.items():
-        pdf.cell(90, 7, index, 1)
-        pdf.cell(60, 7, f'{value:,.2f}', 1, 1)
-    pdf.ln(10)
+    
 
-    pdf.chapter_body('Detalle por Sede:')
-    pdf.set_font('Helvetica', 'B', 10)
-    pdf.cell(90, 7, 'Sede', 1)
-    pdf.cell(60, 7, 'Recaudado (USD)', 1, 1)
-    pdf.set_font('Helvetica', '', 10)
-    for index, value in sales_by_location.items():
-        pdf.cell(90, 7, index, 1)
-        pdf.cell(60, 7, f'{value:,.2f}', 1, 1)
-    pdf.ln(10)
+    add_table(pdf, 'Detalle por Vendedor:', sales_by_seller, 'Vendedor', 'Recaudado (USD)')
+    add_table(pdf, 'Detalle por Sede:', sales_by_location, 'Sede', 'Recaudado (USD)')
 
     pdf.output(os.path.join(tmp, output_pdf))
     logging.info(f"\nReporte de ventas generado exitosamente: {os.path.join(tmp, output_pdf)}")
@@ -178,8 +147,29 @@ def get_sales_chart(sales_by_channel, color, title, xlabel, ylabel, output_file)
     plt.tight_layout()
     plt.savefig(output_file)
     plt.close()
+    
+def add_table(pdf, title, data, col1, col2):
+        pdf.chapter_body(title)
+        pdf.set_font('Helvetica', 'B', 10)
+        pdf.cell(90, 7, col1, 1)
+        pdf.cell(60, 7, col2, 1, 1)
+        pdf.set_font('Helvetica', '', 10)
+        for index, value in data.items():
+            pdf.cell(90, 7, str(index), 1)
+            pdf.cell(60, 7, f'{value:,.2f}', 1, 1)
+        pdf.ln(10)
+        
+def add_chart(pdf, img_path, title, add_new_page=False, fail_msg=None):
+    if os.path.exists(img_path):
+        if add_new_page:
+            pdf.add_page()
+        pdf.chapter_body(title)
+        pdf.image(img_path, x=10, w=pdf.w - 20)
+        pdf.ln(5)
+    else:
+        pdf.chapter_body(fail_msg or f'No se pudo generar el gráfico: {title}')
             
-def enviar_reporte_whatsapp(pdf_file: str, recipient_id: str, filename:str="reporte_ventas.pdf"):
+def send_report(pdf_file: str, recipient_id: str, filename:str="reporte_ventas.pdf"):
     """
     Envia el reporte de ventas generado por WhatsApp.
     Parámetros:
@@ -209,7 +199,7 @@ def get_tool(recipient_id: str):
         """
         report_name = 'sales_report.pdf'
         try:
-            report_path = generar_reporte_ventas(
+            report_path = generate_sales_report(
                 excel_file=os.getenv('FILE_URL'),
                 output_pdf=report_name,
                 start_date=start_date,
@@ -219,7 +209,7 @@ def get_tool(recipient_id: str):
             return f"Error al generar el reporte: {e}"
         
         filename = f"reporte_ventas_{start_date}_{end_date}.pdf" if start_date and end_date else "reporte_ventas.pdf"
-        enviar_reporte_whatsapp(
+        send_report(
             pdf_file=report_path,
             recipient_id=recipient_id,
             filename=filename
@@ -234,7 +224,7 @@ def get_tool(recipient_id: str):
             
             
 if __name__ == "__main__":
-  generar_reporte_ventas(
+  generate_sales_report(
     excel_file=os.getenv('FILE_URL'),
     output_pdf='sales_report.pdf',
     start_date="2017-01-01",
